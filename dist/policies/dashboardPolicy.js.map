@@ -1,0 +1,1 @@
+{"version":3,"file":"dashboardPolicy.js","sourceRoot":"","sources":["../../src/policies/dashboardPolicy.ts"],"names":[],"mappings":"AAAA,MAAM,CAAC,MAAM,gBAAgB,GAAG,CAAC,IAAS,EAAE,EAAE;IAC5C,OAAO,CAAC,OAAO,EAAE,SAAS,EAAE,YAAY,CAAC,CAAC,QAAQ,CAAC,IAAI,CAAC,IAAI,CAAC,CAAC;AAChE,CAAC,CAAC"}
