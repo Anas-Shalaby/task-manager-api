@@ -1,0 +1,161 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Team {
+  id          String   @id @default(uuid())
+  name        String
+  code        String   @unique
+  description String?  @db.Text
+  managerId   String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  users       User[]
+  tasks       Task[]
+  manager     User?    @relation("TeamManager", fields: [managerId], references: [id], onDelete: SetNull)
+}
+
+enum MilitaryRank {
+  BRIGADIER
+  LIEUTENANT_COLONEL
+  MAJOR
+  FIRST_LIEUTENANT
+  SENIOR_WARRANT_OFFICER
+  WARRANT_OFFICER
+  STAFF_SERGEANT
+  SERGEANT
+  SOLDIER
+  MILITARY_FOLLOW_UP
+  CIVILIAN
+}
+
+model User {
+  id            String         @id @default(uuid())
+  name          String
+  email         String         @unique
+  password      String
+  role          String         @default("employee") // admin, manager, supervisor, employee
+  rank          MilitaryRank?
+
+  teamId        String?
+  isActive      Boolean        @default(true)
+  team          Team?          @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  managedTeams  Team[]         @relation("TeamManager")
+  tasksAssigned TaskAssignee[]
+  taskUpdates   TaskUpdate[]
+  notifications Notification[]
+  activityLogs  ActivityLog[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  taskComments  TaskComment[]
+  taskBlockers  TaskBlocker[]
+}
+
+model Task {
+  id          String         @id @default(uuid())
+  title       String
+  description String?        @db.Text
+  priority    String         @default("medium") // low, medium, high, critical
+  status      String         @default("pending") // pending, in_progress, blocked, completed
+  progress    Int            @default(0) // 0 to 100
+  deadline    DateTime?
+  teamId      String?
+  team        Team?          @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  assignees   TaskAssignee[]
+  updates     TaskUpdate[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  comments    TaskComment[]
+  blockers    TaskBlocker[]
+
+  @@index([status, deadline])
+  @@index([priority, status])
+  @@index([updatedAt])
+  @@index([createdAt])
+}
+
+model TaskAssignee {
+  taskId    String
+  userId    String
+  isOwner   Boolean  @default(false)
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([taskId, userId])
+  @@index([userId, taskId])
+}
+
+model TaskUpdate {
+  id        String   @id @default(uuid())
+  taskId    String
+  userId    String
+  message   String   @db.Text
+  progress  Int?
+  status    String?
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model TaskComment {
+  id        String   @id @default(uuid())
+  taskId    String
+  userId    String
+  message   String   @db.Text
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TaskBlocker {
+  id         String    @id @default(uuid())
+  taskId     String
+  userId     String
+  reason     String    @db.Text
+  resolved   Boolean   @default(false)
+  resolvedAt DateTime?
+  task       Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime  @default(now())
+}
+
+model Notification {
+  id         String    @id @default(uuid())
+  userId     String
+  type       String
+  title      String
+  message    String    @db.Text
+  entityType String    @default("TASK")
+  entityId   String?
+  metadata   Json?
+  readAt     DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt, createdAt])
+}
+
+model ActivityLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  action     String
+  entityType String   @default("TASK")
+  entityId   String?
+  changes    Json?
+  metadata   Json?
+  user       User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now())
+
+  @@index([actorId, createdAt])
+  @@index([entityType, entityId, createdAt])
+}
